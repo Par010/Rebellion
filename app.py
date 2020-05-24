@@ -1,6 +1,8 @@
 import random
 import math
 import numpy as np
+from pprint import pprint
+from collections import defaultdict
 from utils.constants import QUIET, ACTIVE, JAILED
 
 
@@ -18,25 +20,43 @@ NUMBER_OF_COPS = math.floor(GRID_SIZE * INITIAL_COP_DENSITY * 0.01)
 k = random.random()
 NUMBER_OF_ACTIVE_AGENTS = 6
 
-position = random.sample(range(1, GRID_SIZE), NUMBER_OF_AGENTS)
+
+position = random.sample(range(1, GRID_SIZE+1), NUMBER_OF_AGENTS)
 start = 0
+# shape = (15, 15, 2)
+# grid_lst = [[x, 0] for x in range(1, GRID_SIZE+1)]
+# grid = np.array(grid_lst)
+
 shape = (15, 15)
-grid = np.array(range(0, GRID_SIZE))
-print(grid.reshape(shape))
+grid_lst = [x for x in range(1, GRID_SIZE+1)]
+d = {x: 0 for x in grid_lst}
+grid = np.array(grid_lst)
+agent_count = 1
+# print(grid.reshape(shape))
+# print(np.where(grid == 79))
 
 
 class Agent:
     def __init__(self):
         global start
+        global agent_count
+        global d
+        self.id = "A " + str(agent_count)
         self.perceived_hardship = random.random()
         self.risk_aversion = random.random()
         self.state = QUIET
         self.position = position[start]
+        self.jail_term = 0
         start += 1
+        agent_count += 1
+        d[self.position] = self.id
 
     def __str__(self):
         return f"perceived_hardship: {self.perceived_hardship}, risk_aversion:{self.risk_aversion}, " \
                f"state:{self.state}, position:{self.position}"
+
+    # move -> position -> find vision box -> random empty list -> move -> return # of cops, # of active agents
+    # change position in original dict and in the next for loop change the state
 
     def estimated_arrest_probability(self):
         global k
@@ -55,7 +75,17 @@ class Agent:
         if self.grievance() > self.estimated_arrest_probability() and self.state == QUIET:
             self.state = ACTIVE
 
-a1 = Agent()
 
+obj_lst = [Agent() for x in range(int(NUMBER_OF_AGENTS))]
+
+for obj in obj_lst:
+    print(obj)
+
+print(d)
+# print(a1)print(grid.reshape(shape))
+# print(np.where(grid == 79))
+# print("----")
+# print(a2)
 # print(a1.handle_state())
 # print(a1)
+
