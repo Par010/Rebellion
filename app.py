@@ -9,7 +9,7 @@ from utils.constants import QUIET, ACTIVE, JAILED
 # global parameters
 
 states = [QUIET, ACTIVE, JAILED]
-GOVERNMENT_LEGITIMACY = random.random()
+GOVERNMENT_LEGITIMACY = random.randrange(0.1, 0.9, 0.1)
 VISION = 4
 GRID_SIZE = 15*15
 INITIAL_COP_DENSITY = 12
@@ -17,7 +17,7 @@ AGENT_DENSITY = 82
 MAX_JAIL_TERM = 30
 NUMBER_OF_AGENTS = math.floor(GRID_SIZE * AGENT_DENSITY * 0.01)
 NUMBER_OF_COPS = math.floor(GRID_SIZE * INITIAL_COP_DENSITY * 0.01)
-k = random.random()
+k = random.randrange(0.1, 0.9, 0.1)
 NUMBER_OF_ACTIVE_AGENTS = 6
 
 
@@ -42,8 +42,8 @@ class Agent:
         global agent_count
         global d
         self.id = "A " + str(agent_count)
-        self.perceived_hardship = random.random()
-        self.risk_aversion = random.random()
+        self.perceived_hardship = random.randrange(0.1, 0.9, 0.1)
+        self.risk_aversion = random.randrange(0.1, 0.9, 0.1)
         self.state = QUIET
         self.__new_state = QUIET
         self.position = position[start]
@@ -56,46 +56,8 @@ class Agent:
         return f"perceived_hardship: {self.perceived_hardship}, risk_aversion:{self.risk_aversion}, " \
                f"state:{self.state}, position:{self.position}"
 
-
-
     # move -> position -> find vision box -> random empty list -> move -> return # of cops, # of active agents
     # change position in original dict and in the next for loop change the state
-
-    def get_position_for_coordinates(self, x, y):
-        return y*15+x+1
-
-    def get_coordinates(self, position):
-        if position % 15 == 0:
-            x = 14
-        else:
-            x = (position % 15) - 1
-
-        y = int(math.ceil(position/15)) - 1
-        return x, y
-
-    def get_circular_coordinates(self, x):
-        # for x
-        return (x % 15 + 15) % 15
-
-    def get_vision_bounds(self, x, y):
-        # for minimum coordinates
-        global VISION
-        xmin = x - VISION
-        ymin = y - VISION
-        xmax = x + VISION
-        ymax = y + VISION
-
-        return (xmin, ymin), (xmax, ymax)
-
-    def get_coordinates_in_bound(self, xmin, ymin, xmax, ymax):
-        for y in range(ymin, ymax+1):
-            for x in range(xmin, xmax+1):
-                normalised_x = self.get_circular_coordinates(x)
-                normalised_y = self.get_circular_coordinates(y)
-                print(normalised_x, normalised_y)
-        return 0
-
-
 
     # def movement(self):
 
@@ -115,6 +77,42 @@ class Agent:
     def handle_state(self):
         if self.grievance() > self.estimated_arrest_probability() and self.state == QUIET:
             self.state = ACTIVE
+
+
+# get position from coordinates
+def get_position_for_coordinates(x, y):
+    return y*15+x+1
+
+
+# get coordinates from position
+def get_coordinates(position):
+    if position % 15 == 0:
+        x = 14
+    else:
+        x = (position % 15) - 1
+
+    y = int(math.ceil(position/15)) - 1
+    return x, y
+
+
+# get vision bound coordinates
+def get_vision_bounds(x, y):
+    # for minimum coordinates
+    xmin = x - VISION
+    ymin = y - VISION
+    xmax = x + VISION
+    ymax = y + VISION
+    return xmin, ymin, xmax, ymax
+
+
+# get all the coordinates in the vision
+def get_coordinates_in_bound(xmin, ymin, xmax, ymax):
+    for y in range(ymin, ymax+1):
+        for x in range(xmin, xmax+1):
+            normalised_x = get_circular_coordinates(x)
+            normalised_y = get_circular_coordinates(y)
+            print(normalised_x, normalised_y)
+    return 0
 
 
 # obj_lst = [Agent() for x in range(int(NUMBER_OF_AGENTS))]
