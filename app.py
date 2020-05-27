@@ -4,8 +4,7 @@ import numpy as np
 from pprint import pprint
 from collections import defaultdict
 from utils.constants import QUIET, ACTIVE, JAILED
-from utils.helper_functions import get_coordinates, get_vision_bounds, get_circular_coordinates, \
-    get_coordinates_in_bound, get_position_for_coordinates
+from utils.helper_functions import get_coordinates, get_vision_bounds, get_coordinates_in_bound
 
 
 # global parameters
@@ -105,8 +104,8 @@ class Agent:
         # bound
         vision_bounds = get_vision_bounds(position_in_coordinates[0], position_in_coordinates[1])
         # get the empty positions list, number of active agents, and number of cops in the vision coordinates
-        vision_position_list = get_coordinates_in_bound(vision_bounds[0], vision_bounds[1], vision_bounds[2],
-                                                        vision_bounds[3])
+        vision_position_list = get_coordinates_in_bound(vision_bounds[0], vision_bounds[1],
+                                                                               vision_bounds[2], vision_bounds[3])
 
         return vision_position_list
 
@@ -160,6 +159,39 @@ class Cop:
     def __str__(self):
         return f"id: {self.id}, position:{self.position}"
 
+    def get_empty_positions(self, vision_position_list):
+        available_positions = []
+        for pos in vision_position_list:
+            if d[pos] == self.position:
+                pass
+            if d[pos] == 0:
+                available_positions.append(pos)
+        return available_positions
+
+    def vision_analysis(self):
+        # get the coordinates for the current position
+        position_in_coordinates = get_coordinates(self.position)
+        # get the vision bounds by finding the minimum (x,y) coordinate and maximum (x,y) coordinates of the Vision
+        # bound
+        vision_bounds = get_vision_bounds(position_in_coordinates[0], position_in_coordinates[1])
+        # get the empty positions list, number of active agents, and number of cops in the vision coordinates
+        vision_position_list = get_coordinates_in_bound(vision_bounds[0], vision_bounds[1],
+                                                                               vision_bounds[2], vision_bounds[3])
+
+        return vision_position_list
+
+    def movement(self):
+        vision_position_list = self.vision_analysis()
+        available_positions = self.get_empty_positions(vision_position_list)
+        if len(available_positions) == 0:
+            pass
+        else:
+            chosen_position_to_jump = available_positions[random.randrange(0, len(available_positions))]
+            d[self.position] = 0
+            self.position = chosen_position_to_jump
+            d[chosen_position_to_jump] = self.id
+        return 0
+
 
 obj_lst = [Agent() for x in range(int(NUMBER_OF_AGENTS))]
 cops_lst = [Cop() for x in range(int(NUMBER_OF_COPS))]
@@ -175,6 +207,11 @@ for cop in cops_lst:
 # print(d)
 # obj_lst[0].movement()
 # print("-------")
+# print(d)
+# print(cops_lst[0])
+print(d)
+print("---")
+cops_lst[0].movement()
 print(d)
 
 # obj_lst[0].handle_state()
