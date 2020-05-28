@@ -4,7 +4,6 @@ import numpy as np
 from pprint import pprint
 from collections import defaultdict
 from utils.constants import QUIET, ACTIVE, JAILED
-from utils.helper_functions import get_coordinates, get_vision_bounds, get_coordinates_in_bound
 
 
 # global parameters
@@ -50,6 +49,104 @@ print(grid.reshape(shape))
 # print(np.where(grid == 79))
 
 
+# helper functions
+
+# get position from coordinates
+def get_position_for_coordinates(x, y):
+    return y*15+x+1
+
+
+# get coordinates from position
+def get_coordinates(position):
+    if position % 15 == 0:
+        x = 14
+    else:
+        x = (position % 15) - 1
+
+    y = int(math.ceil(position/15)) - 1
+    return [x, y]
+
+
+# get vision bound coordinates
+def get_vision_bounds(x, y):
+    # for minimum coordinates
+    xmin = x - VISION
+    ymin = y - VISION
+    xmax = x + VISION
+    ymax = y + VISION
+    return [xmin, ymin, xmax, ymax]
+
+
+# get all the coordinates in the vision
+def get_coordinates_in_bound(xmin, ymin, xmax, ymax):
+    position_list = []
+    for y in range(ymin, ymax+1):
+        for x in range(xmin, xmax+1):
+            normalised_x = get_circular_coordinates(x)
+            normalised_y = get_circular_coordinates(y)
+            position_list.append(get_position_for_coordinates(normalised_x, normalised_y))
+    return position_list
+
+
+# get circular coordinates
+def get_circular_coordinates( x):
+    return (x % 15 + 15) % 15
+
+
+def get_active_agents_and_cops_in_vision(vision_position_list, position):
+    active_obj_count = 0
+    cops_count = 0
+    for pos in vision_position_list:
+        if d[pos] == position:
+            pass
+        elif d[pos] == 0:
+            pass
+        elif d[pos].startswith('A'):
+            if obj_dict[d[pos]].state == ACTIVE:
+                active_obj_count += 1
+        elif d[pos].startswith('C'):
+            cops_count += 1
+    return [active_obj_count, cops_count]
+
+
+def get_active_agents_list(vision_position_list, position):
+    active_obj_lst = []
+    for pos in vision_position_list:
+        if d[pos] == position:
+            pass
+        elif d[pos] == 0:
+            pass
+        elif d[pos].startswith('A'):
+            if obj_dict[d[pos]].state == ACTIVE:
+                active_obj_lst.append(pos)
+        else:
+            pass
+    return active_obj_lst
+
+
+def get_empty_positions(vision_position_list, position):
+    available_positions = []
+    for pos in vision_position_list:
+        if d[pos] == position:
+            pass
+        if d[pos] == 0:
+            available_positions.append(pos)
+    return available_positions
+
+
+def vision_analysis(position):
+    # get the coordinates for the current position
+    position_in_coordinates = get_coordinates(position)
+    # get the vision bounds by finding the minimum (x,y) coordinate and maximum (x,y) coordinates of the Vision
+    # bound
+    vision_bounds = get_vision_bounds(position_in_coordinates[0], position_in_coordinates[1])
+    # get the empty positions list, number of active agents, and number of cops in the vision coordinates
+    vision_position_list = get_coordinates_in_bound(vision_bounds[0], vision_bounds[1], vision_bounds[2],
+                                                    vision_bounds[3])
+
+    return vision_position_list
+
+
 class Agent:
     def __init__(self):
         global agent_start
@@ -68,50 +165,15 @@ class Agent:
 
     def __str__(self):
         return f"perceived_hardship: {self.perceived_hardship}, risk_aversion:{self.risk_aversion}, " \
-               f"state:{self.state}, position:{self.position}"
+               f"state:{self.state}, position:{self.position}, jail_term: {self.jail_term}"
 
     # move -> position -> find vision box -> random empty list -> move -> return # of cops, # of active agents
     # change position in original dict and in the next for loop change the state
 
-    def get_active_agents_and_cops_in_vision(self, vision_position_list):
-        active_obj_count = 0
-        cops_count = 0
-        for pos in vision_position_list:
-            if d[pos] == self.position:
-                pass
-            elif d[pos] == 0:
-                pass
-            elif d[pos].startswith('A'):
-                if obj_dict[d[pos]].state == ACTIVE:
-                    active_obj_count += 1
-            elif d[pos].startswith('C'):
-                cops_count += 1
-        return [active_obj_count, cops_count]
-
-    def get_empty_positions(self, vision_position_list):
-        available_positions = []
-        for pos in vision_position_list:
-            if d[pos] == self.position:
-                pass
-            if d[pos] == 0:
-                available_positions.append(pos)
-        return available_positions
-
-    def vision_analysis(self):
-        # get the coordinates for the current position
-        position_in_coordinates = get_coordinates(self.position)
-        # get the vision bounds by finding the minimum (x,y) coordinate and maximum (x,y) coordinates of the Vision
-        # bound
-        vision_bounds = get_vision_bounds(position_in_coordinates[0], position_in_coordinates[1])
-        # get the empty positions list, number of active agents, and number of cops in the vision coordinates
-        vision_position_list = get_coordinates_in_bound(vision_bounds[0], vision_bounds[1],
-                                                                               vision_bounds[2], vision_bounds[3])
-
-        return vision_position_list
-
     def movement(self):
-        vision_position_list = self.vision_analysis()
-        available_positions = self.get_empty_positions(vision_position_list)
+        global d
+        vision_position_list = vision_analysis(position=self.position)
+        available_positions = get_empty_positions(vision_position_list, position=self.position)
         if len(available_positions) == 0:
             pass
         else:
@@ -136,14 +198,21 @@ class Agent:
         return estimated_arrest_probability
 
     def net_risk(self):
-        vision_position_list = self.vision_analysis()
-        active_agents_and_cops_in_vision = self.get_active_agents_and_cops_in_vision(vision_position_list)
+        vision_position_list = vision_analysis(position=self.position)
+        active_agents_and_cops_in_vision = get_active_agents_and_cops_in_vision(vision_position_list,
+                                                                                position=self.position)
         return self.__estimated_arrest_probability(active_agents_and_cops_in_vision[0],
                                                    active_agents_and_cops_in_vision[1]) * self.risk_aversion
 
+    def update_state(self):
+        if self.__new_state != self.state:
+            self.state = self.__new_state
+
     def handle_state(self):
         if self.grievance() > self.net_risk() and self.state == QUIET:
-            self.state = ACTIVE
+            self.__new_state = ACTIVE
+        else:
+            self.__new_state = self.state
 
 
 class Cop:
@@ -159,30 +228,10 @@ class Cop:
     def __str__(self):
         return f"id: {self.id}, position:{self.position}"
 
-    def get_empty_positions(self, vision_position_list):
-        available_positions = []
-        for pos in vision_position_list:
-            if d[pos] == self.position:
-                pass
-            if d[pos] == 0:
-                available_positions.append(pos)
-        return available_positions
-
-    def vision_analysis(self):
-        # get the coordinates for the current position
-        position_in_coordinates = get_coordinates(self.position)
-        # get the vision bounds by finding the minimum (x,y) coordinate and maximum (x,y) coordinates of the Vision
-        # bound
-        vision_bounds = get_vision_bounds(position_in_coordinates[0], position_in_coordinates[1])
-        # get the empty positions list, number of active agents, and number of cops in the vision coordinates
-        vision_position_list = get_coordinates_in_bound(vision_bounds[0], vision_bounds[1],
-                                                                               vision_bounds[2], vision_bounds[3])
-
-        return vision_position_list
-
     def movement(self):
-        vision_position_list = self.vision_analysis()
-        available_positions = self.get_empty_positions(vision_position_list)
+        global d
+        vision_position_list = vision_analysis(position=self.position)
+        available_positions = get_empty_positions(vision_position_list, position=self.position)
         if len(available_positions) == 0:
             pass
         else:
@@ -190,6 +239,38 @@ class Cop:
             d[self.position] = 0
             self.position = chosen_position_to_jump
             d[chosen_position_to_jump] = self.id
+        return 0
+
+    def arrest(self):
+        global obj_dict
+        global d
+        # look for positions in the vision on the cop
+        vision_position_list = vision_analysis(position=self.position)
+        # get the list of active agents in the vision
+        active_agents_lst = get_active_agents_list(vision_position_list, position=self.position)
+        if len(active_agents_lst) == 0:
+            pass
+        else:
+            agent_to_jail_position = random.randrange(0, len(active_agents_lst))
+            # choose an agent in random from the list of active agents
+            agent_to_jail = active_agents_lst[agent_to_jail_position]
+            print(agent_to_jail)
+            # d[agent_to_jail_position] = 0
+            # jail the chosen active agent
+            obj_dict[d[agent_to_jail]].state = JAILED
+            # give the agent a jail term from 1 to max jail term
+            obj_dict[d[agent_to_jail]].jail_term = random.randrange(1, MAX_JAIL_TERM+1)
+            print(obj_dict[d[agent_to_jail]])
+            # change agent position to unknown - 0
+            obj_dict[d[agent_to_jail]].position = 0
+            # vacate the position of the jailed agent
+            d[agent_to_jail] = 0
+            # vacate cop's current position
+            d[self.position] = 0
+            # change cop's position to the active agent's position
+            self.position = agent_to_jail
+            # update the cop's position
+            d[agent_to_jail] = self.id
         return 0
 
 
@@ -203,16 +284,38 @@ cop_dict = {}
 for cop in cops_lst:
     cop_dict[cop.id] = cop
 
+print("----")
+
 # print(obj_lst[0].id)
 # print(d)
 # obj_lst[0].movement()
 # print("-------")
 # print(d)
 # print(cops_lst[0])
+for o in obj_lst:
+    o.movement()
+
+for c in cops_lst:
+    c.movement()
+
+for ob in obj_lst:
+    ob.handle_state()
+
+for j in obj_lst:
+    j.update_state()
+
 print(d)
+
+cops_lst[0].arrest()
+
 print("---")
-cops_lst[0].movement()
 print(d)
+# print(d)
+# print(cops_lst[0])
+# print("---")
+#
+# cops_lst[0].arrest()
+# print(d)
 
 # obj_lst[0].handle_state()
 #
@@ -242,3 +345,4 @@ print(d)
 
 # print(obj.get_position_for_coordinates(0, 14))
 # print(d[102])
+
