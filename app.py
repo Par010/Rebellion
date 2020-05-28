@@ -9,16 +9,19 @@ from utils.constants import QUIET, ACTIVE, JAILED
 # global parameters
 
 states = [QUIET, ACTIVE, JAILED]
-GOVERNMENT_LEGITIMACY = random.uniform(0.1, 0.9)
-VISION = 4
+# GOVERNMENT_LEGITIMACY = random.uniform(0.1, 0.9)
+GOVERNMENT_LEGITIMACY = 0.99
+VISION = 3
 GRID_SIZE = 15*15
 INITIAL_COP_DENSITY = 12
 AGENT_DENSITY = 82
-MAX_JAIL_TERM = 30
+MAX_JAIL_TERM = 10
 NUMBER_OF_AGENTS = math.floor((GRID_SIZE - 1) * AGENT_DENSITY * 0.01)
+print(NUMBER_OF_AGENTS)
 NUMBER_OF_COPS = math.floor((GRID_SIZE - 1) * INITIAL_COP_DENSITY * 0.01)
 k = random.uniform(0.1, 0.9)
-NUMBER_OF_ACTIVE_AGENTS = 6
+print(NUMBER_OF_COPS)
+# NUMBER_OF_ACTIVE_AGENTS = 6
 
 
 agent_position = random.sample(range(1, GRID_SIZE+1), NUMBER_OF_AGENTS)
@@ -161,8 +164,10 @@ class Agent:
         global agent_count
         global d
         self.id = "A" + str(agent_count)
-        self.perceived_hardship = random.uniform(0.1, 0.9)
-        self.risk_aversion = random.uniform(0.1, 0.9)
+        # self.perceived_hardship = random.uniform(0.1, 0.9)
+        self.perceived_hardship = 0.01
+        # self.risk_aversion = random.uniform(0.1, 0.9)
+        self.risk_aversion = 1
         self.state = QUIET
         self.__new_state = QUIET
         self.position = agent_position[agent_start]
@@ -180,7 +185,7 @@ class Agent:
 
     def movement(self):
         global d
-        if self.position is not None:
+        if self.state is not JAILED:
             vision_position_list = vision_analysis(position=self.position)
             available_positions = get_empty_positions(vision_position_list, position=self.position)
             if len(available_positions) == 0:
@@ -190,6 +195,8 @@ class Agent:
                 d[self.position] = 0
                 self.position = chosen_position_to_jump
                 d[chosen_position_to_jump] = self.id
+        else:
+            pass
         return 0
 
     def grievance(self):
@@ -204,21 +211,24 @@ class Agent:
             estimated_arrest_probability = 1 - math.exp(-k * (math.floor(number_of_cops / number_of_active_agents)))
         except ZeroDivisionError:
             estimated_arrest_probability = 1
+        # print(estimated_arrest_probability)
         return estimated_arrest_probability
 
     def net_risk(self):
         vision_position_list = vision_analysis(position=self.position)
         active_agents_and_cops_in_vision = get_active_agents_and_cops_in_vision(vision_position_list,
                                                                                 position=self.position)
+        # print(active_agents_and_cops_in_vision)
         return self.__estimated_arrest_probability(active_agents_and_cops_in_vision[0],
                                                    active_agents_and_cops_in_vision[1]) * self.risk_aversion
 
     def update_state(self):
-        if self.__new_state != self.state:
-            self.state = self.__new_state
+        if self.state is not JAILED:
+            if self.__new_state != self.state:
+                self.state = self.__new_state
 
     def handle_state(self):
-        if self.position is not None:
+        if self.state is not JAILED:
             if self.grievance() > self.net_risk() and self.state == QUIET:
                 self.__new_state = ACTIVE
             else:
@@ -240,16 +250,15 @@ class Cop:
 
     def movement(self):
         global d
-        if self.position is not None:
-            vision_position_list = vision_analysis(position=self.position)
-            available_positions = get_empty_positions(vision_position_list, position=self.position)
-            if len(available_positions) == 0:
-                pass
-            else:
-                chosen_position_to_jump = available_positions[random.randrange(0, len(available_positions))]
-                d[self.position] = 0
-                self.position = chosen_position_to_jump
-                d[chosen_position_to_jump] = self.id
+        vision_position_list = vision_analysis(position=self.position)
+        available_positions = get_empty_positions(vision_position_list, position=self.position)
+        if len(available_positions) == 0:
+            pass
+        else:
+            chosen_position_to_jump = available_positions[random.randrange(0, len(available_positions))]
+            d[self.position] = 0
+            self.position = chosen_position_to_jump
+            d[chosen_position_to_jump] = self.id
         return 0
 
     def arrest(self):
@@ -322,14 +331,49 @@ while True:
 
     for obj in obj_lst:
         if obj_dict[obj.id].state == JAILED:
+            # print("Jailed")
             if obj_dict[obj.id].jail_term > 1:
                 obj_dict[obj.id].jail_term -= 1
-            elif obj_dict[obj.id].jail_term == 1:
-                available_positions = empty_positions_in_world(d)
-                obj_dict[obj.id].position = available_positions[random.randrange(0, len(available_positions))]
+            if obj_dict[obj.id].jail_term == 1:
+                # print("hits")
+                available_world_positions = empty_positions_in_world(d)
+                position_selected = available_world_positions[random.randrange(0, len(available_world_positions))]
+                # print(position_selected)
+                obj_dict[obj.id].position = position_selected
+                # print("placed at " + str(position_selected))
                 obj_dict[obj.id].state = QUIET
                 obj_dict[obj.id].jail_term -= 1
+                d[position_selected] = obj.id
+
     print(d)
+
+# for x in range(0,3):
+#     for obj in obj_lst:
+#         obj.movement()
+#
+#     for obj in cops_lst:
+#         obj.movement()
+#
+#     for obj in obj_lst:
+#         obj.handle_state()
+#
+#     for obj in obj_lst:
+#         obj.update_state()
+#
+#     for obj in cops_lst:
+#         obj.arrest()
+#
+#     for obj in obj_lst:
+#         if obj_dict[obj.id].state == JAILED:
+#             print("JAILED")
+#             if obj_dict[obj.id].jail_term > 1:
+#                 obj_dict[obj.id].jail_term -= 1
+#             elif obj_dict[obj.id].jail_term == 1:
+#                 available_positions = empty_positions_in_world(d)
+#                 obj_dict[obj.id].position = available_positions[random.randrange(0, len(available_positions))]
+#                 obj_dict[obj.id].state = QUIET
+#                 obj_dict[obj.id].jail_term -= 1
+#     print(d)
 
 
 # cops_lst[0].arrest()
