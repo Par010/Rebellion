@@ -52,6 +52,14 @@ print(grid.reshape(shape))
 # helper functions
 
 # get position from coordinates
+def empty_positions_in_world(dt):
+    empty_positions_list = []
+    for dic in dt:
+        if dt[dic] == 0:
+            empty_positions_list.append(dic)
+    return empty_positions_list
+
+
 def get_position_for_coordinates(x, y):
     return y*15+x+1
 
@@ -172,15 +180,16 @@ class Agent:
 
     def movement(self):
         global d
-        vision_position_list = vision_analysis(position=self.position)
-        available_positions = get_empty_positions(vision_position_list, position=self.position)
-        if len(available_positions) == 0:
-            pass
-        else:
-            chosen_position_to_jump = available_positions[random.randrange(0, len(available_positions))]
-            d[self.position] = 0
-            self.position = chosen_position_to_jump
-            d[chosen_position_to_jump] = self.id
+        if self.position is not None:
+            vision_position_list = vision_analysis(position=self.position)
+            available_positions = get_empty_positions(vision_position_list, position=self.position)
+            if len(available_positions) == 0:
+                pass
+            else:
+                chosen_position_to_jump = available_positions[random.randrange(0, len(available_positions))]
+                d[self.position] = 0
+                self.position = chosen_position_to_jump
+                d[chosen_position_to_jump] = self.id
         return 0
 
     def grievance(self):
@@ -209,10 +218,11 @@ class Agent:
             self.state = self.__new_state
 
     def handle_state(self):
-        if self.grievance() > self.net_risk() and self.state == QUIET:
-            self.__new_state = ACTIVE
-        else:
-            self.__new_state = self.state
+        if self.position is not None:
+            if self.grievance() > self.net_risk() and self.state == QUIET:
+                self.__new_state = ACTIVE
+            else:
+                self.__new_state = self.state
 
 
 class Cop:
@@ -230,15 +240,16 @@ class Cop:
 
     def movement(self):
         global d
-        vision_position_list = vision_analysis(position=self.position)
-        available_positions = get_empty_positions(vision_position_list, position=self.position)
-        if len(available_positions) == 0:
-            pass
-        else:
-            chosen_position_to_jump = available_positions[random.randrange(0, len(available_positions))]
-            d[self.position] = 0
-            self.position = chosen_position_to_jump
-            d[chosen_position_to_jump] = self.id
+        if self.position is not None:
+            vision_position_list = vision_analysis(position=self.position)
+            available_positions = get_empty_positions(vision_position_list, position=self.position)
+            if len(available_positions) == 0:
+                pass
+            else:
+                chosen_position_to_jump = available_positions[random.randrange(0, len(available_positions))]
+                d[self.position] = 0
+                self.position = chosen_position_to_jump
+                d[chosen_position_to_jump] = self.id
         return 0
 
     def arrest(self):
@@ -254,15 +265,15 @@ class Cop:
             agent_to_jail_position = random.randrange(0, len(active_agents_lst))
             # choose an agent in random from the list of active agents
             agent_to_jail = active_agents_lst[agent_to_jail_position]
-            print(agent_to_jail)
+            # print(agent_to_jail)
             # d[agent_to_jail_position] = 0
             # jail the chosen active agent
             obj_dict[d[agent_to_jail]].state = JAILED
             # give the agent a jail term from 1 to max jail term
             obj_dict[d[agent_to_jail]].jail_term = random.randrange(1, MAX_JAIL_TERM+1)
-            print(obj_dict[d[agent_to_jail]])
+            # print(obj_dict[d[agent_to_jail]])
             # change agent position to unknown - 0
-            obj_dict[d[agent_to_jail]].position = 0
+            obj_dict[d[agent_to_jail]].position = None
             # vacate the position of the jailed agent
             d[agent_to_jail] = 0
             # vacate cop's current position
@@ -284,7 +295,7 @@ cop_dict = {}
 for cop in cops_lst:
     cop_dict[cop.id] = cop
 
-print("----")
+# print("----")
 
 # print(obj_lst[0].id)
 # print(d)
@@ -292,24 +303,39 @@ print("----")
 # print("-------")
 # print(d)
 # print(cops_lst[0])
-for o in obj_lst:
-    o.movement()
 
-for c in cops_lst:
-    c.movement()
+while True:
+    for obj in obj_lst:
+        obj.movement()
 
-for ob in obj_lst:
-    ob.handle_state()
+    for obj in cops_lst:
+        obj.movement()
 
-for j in obj_lst:
-    j.update_state()
+    for obj in obj_lst:
+        obj.handle_state()
 
-print(d)
+    for obj in obj_lst:
+        obj.update_state()
 
-cops_lst[0].arrest()
+    for obj in cops_lst:
+        obj.arrest()
 
-print("---")
-print(d)
+    for obj in obj_lst:
+        if obj_dict[obj.id].state == JAILED:
+            if obj_dict[obj.id].jail_term > 1:
+                obj_dict[obj.id].jail_term -= 1
+            elif obj_dict[obj.id].jail_term == 1:
+                available_positions = empty_positions_in_world(d)
+                obj_dict[obj.id].position = available_positions[random.randrange(0, len(available_positions))]
+                obj_dict[obj.id].state = QUIET
+                obj_dict[obj.id].jail_term -= 1
+    print(d)
+
+
+# cops_lst[0].arrest()
+#
+# print("---")
+# print(d)
 # print(d)
 # print(cops_lst[0])
 # print("---")
@@ -346,3 +372,6 @@ print(d)
 # print(obj.get_position_for_coordinates(0, 14))
 # print(d[102])
 
+#
+# print(empty_positions_in_world(d))
+# print(d)
