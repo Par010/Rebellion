@@ -146,7 +146,7 @@ def get_active_agents_and_cops_in_vision(vision_position_list, position):
         # if the entity present at the position in the world is an Agent and is with the status ACTIVE increment
         # active_agent_count by 1
         elif d[pos].startswith('A'):
-            if obj_dict[d[pos]].state == constants.ACTIVE:
+            if agent_dict[d[pos]].state == constants.ACTIVE:
                 active_agent_count += 1
         # if the entity present is a Cop in the world increment cops_count by 1
         elif d[pos].startswith('C'):
@@ -168,7 +168,7 @@ def get_active_agents_list(vision_position_list, position):
         # if the entity present at the position in the world is an Agent and is with the status ACTIVE append
         # the position to active_agent_count list
         elif d[pos].startswith('A'):
-            if obj_dict[d[pos]].state == constants.ACTIVE:
+            if agent_dict[d[pos]].state == constants.ACTIVE:
                 active_agent_count.append(pos)
         else:
             pass
@@ -205,21 +205,31 @@ def vision_analysis(position):
 
 
 class Agent:
+    """Agent is a part of general population in the world who can be either in the QUIET, ACTIVE, or JAILED
+    state based on the net_risk and grievance"""
+
     def __init__(self):
         global agent_start
         global agent_count
         global d
         self.id = "A" + str(agent_count)
+        # perceived hardship of the Agent, will not change
         # self.perceived_hardship = random.uniform(0.1, 0.9)
         self.perceived_hardship = 0.01
+        # risk aversion of the Agent, will not change
         # self.risk_aversion = random.uniform(0.1, 0.9)
         self.risk_aversion = 1
+        # initial state of the Agent
         self.state = constants.QUIET
+        # new state of the Agent, initialised as QUIET
         self.__new_state = constants.QUIET
+        # position of the Agent in the world
         self.position = initial_agent_positions[agent_start]
+        # jail term is initialised as 0
         self.jail_term = 0
         agent_start += 1
         agent_count += 1
+        # set the position in the world i.e d to id of the Agent
         d[self.position] = self.id
 
     def __str__(self):
@@ -227,29 +237,39 @@ class Agent:
                f"state:{self.state}, position:{self.position}, jail_term: {self.jail_term}"
 
     def movement(self):
+        """method enables the Agent to potentially move to an empty position within its VISION bounds"""
         global d
+        # if the Agent is in the JAILED state do nothing
         if self.state is not constants.JAILED:
+            # get list of available positions to move for the Agent within its VISION bounds
             vision_position_list = vision_analysis(position=self.position)
             available_positions = get_empty_positions(vision_position_list, position=self.position)
+            # if there is no position available do nothing
             if len(available_positions) == 0:
                 pass
             else:
+                # choose a position from the available options in the VISION bounds
                 chosen_position_to_jump = available_positions[random.randrange(0, len(available_positions))]
                 d[self.position] = 0
+                # change the Agent object position to new position
                 self.position = chosen_position_to_jump
+                # set the id of the Agent to the position in the world i.e d
                 d[chosen_position_to_jump] = self.id
         else:
             pass
         return 0
 
     def grievance(self):
+        """method calculates the grievance of the Agent object"""
         global GOVERNMENT_LEGITIMACY
         return self.perceived_hardship/GOVERNMENT_LEGITIMACY
 
     def __estimated_arrest_probability(self, number_of_cops, number_of_active_agents):
+        """method returns estimated_arrest_probability of the Agent object"""
         global k
         global NUMBER_OF_COPS
-        global NUMBER_OF_ACTIVE_AGENTS
+        # formula for estimated_arrest_probability is 1-exp(-k*(number of cops in the VISION bounds/
+        # number of active agents in the VISION bounds))
         try:
             estimated_arrest_probability = 1 - math.exp(-k * (math.floor(number_of_cops / number_of_active_agents)))
         except ZeroDivisionError:
@@ -258,7 +278,10 @@ class Agent:
         return estimated_arrest_probability
 
     def net_risk(self):
+        """method returns the net_risk which is given by the formula estimated_arrest_probability * risk_aversion"""
+        # get the list of positions in the VISION bounds of the Agent
         vision_position_list = vision_analysis(position=self.position)
+        # get the number of cops and active agents in the VISION bounds
         active_agents_and_cops_in_vision = get_active_agents_and_cops_in_vision(vision_position_list,
                                                                                 position=self.position)
         # print(active_agents_and_cops_in_vision)
@@ -266,24 +289,59 @@ class Agent:
                                                    active_agents_and_cops_in_vision[1]) * self.risk_aversion
 
     def update_state(self):
+        """method updates the state of an Agent object to the handled state in a given pass. This ensures that the
+        other Agent objects update their states based on the state from previous pass, ensuring integrity """
         if self.state is not constants.JAILED:
             if self.__new_state != self.state:
                 self.state = self.__new_state
 
     def handle_state(self):
+        """method changes the state of the Agent object if the current state is QUIET and the grievance is
+        currently higher than the net_risk."""
+        # if state is JAILED do nothing
         if self.state is not constants.JAILED:
+            # if grievance is higher than net_risk and state is QUIET set the new_state to ACTIVE
             if self.grievance() > self.net_risk() and self.state == constants.QUIET:
                 self.__new_state = constants.ACTIVE
             else:
+                # if the state was not changed assign new_state as state
                 self.__new_state = self.state
+
+    def handle_jailing(self):
+        """method handles jailed agents according to the number of jail_terms they are assigned, eventually assign them
+        to a random position in the world after the jail_term is over"""
+        # if state is JAILED handle state
+        if self.state == constants.JAILED:
+            # if the jail_term is > 1 reduce the jail term by 1
+            if self.jail_term > 1:
+                self.jail_term -= 1
+            # if jail_term is equal to 1, add the Agent to an empty position in the world and set the state to QUIET
+            elif self.jail_term == 1:
+                # find an empty position in the world
+                available_world_positions = empty_positions_in_world(d)
+                # select an empty position at random
+                position_selected = available_world_positions[random.randrange(0, len(available_world_positions))]
+                # set the position of the agent to position_selected
+                self.position = position_selected
+                # set the state of the agent to QUIET
+                self.state = constants.QUIET
+                # set the jail_term back to 0
+                self.jail_term -= 1
+                # set the id of the Agent in the position in the world, i.e d
+                d[position_selected] = self.id
 
 
 class Cop:
+    """Cop is an authoritarian entity in the world which jails the Agents who are rebelling (ACTIVE)
+    against the government."""
+
     def __init__(self):
         global cop_count
         global cop_start
         self.id = "C" + str(cop_count)
+        # set the position of the Cop from the initial_cop_positions
         self.position = initial_cop_positions[cop_start]
+        # set the position of the Cop in the world i.e d
         d[self.position] = self.id
         cop_count += 1
         cop_start += 1
@@ -292,20 +350,27 @@ class Cop:
         return f"id: {self.id}, position:{self.position}"
 
     def movement(self):
+        """method enables the Cop to potentially move to an empty position within its VISION bounds"""
         global d
+        # get list of available positions to move for the Cop within its VISION bounds
         vision_position_list = vision_analysis(position=self.position)
         available_positions = get_empty_positions(vision_position_list, position=self.position)
+        # if there is no position available do nothing
         if len(available_positions) == 0:
             pass
         else:
+            # choose a position from the available options in the VISION bounds
             chosen_position_to_jump = available_positions[random.randrange(0, len(available_positions))]
             d[self.position] = 0
+            # change the Cop object position to new position
             self.position = chosen_position_to_jump
+            # set the id of the Cop to the position in the world i.e d
             d[chosen_position_to_jump] = self.id
         return 0
 
     def arrest(self):
-        global obj_dict
+        """method handles arresting an ACTIVE Agent object by the Cop object."""
+        global agent_dict
         global d
         # look for positions in the vision on the cop
         vision_position_list = vision_analysis(position=self.position)
@@ -320,12 +385,12 @@ class Cop:
             # print(agent_to_jail)
             # d[agent_to_jail_position] = 0
             # jail the chosen active agent
-            obj_dict[d[agent_to_jail]].state = constants.JAILED
+            agent_dict[d[agent_to_jail]].state = constants.JAILED
             # give the agent a jail term from 1 to max jail term
-            obj_dict[d[agent_to_jail]].jail_term = random.randrange(2, MAX_JAIL_TERM+2)
-            # print(obj_dict[d[agent_to_jail]])
+            agent_dict[d[agent_to_jail]].jail_term = random.randrange(2, MAX_JAIL_TERM+2)
+            # print(agent_dict[d[agent_to_jail]])
             # change agent position to unknown - 0
-            obj_dict[d[agent_to_jail]].position = None
+            agent_dict[d[agent_to_jail]].position = None
             # vacate the position of the jailed agent
             d[agent_to_jail] = 0
             # vacate cop's current position
@@ -337,59 +402,53 @@ class Cop:
         return 0
 
 
-obj_lst = [Agent() for x in range(int(NUMBER_OF_AGENTS))]
-cops_lst = [Cop() for x in range(int(NUMBER_OF_COPS))]
-obj_dict = {}
-for obj in obj_lst:
-    obj_dict[obj.id] = obj
+# populate the world initially
 
+# populate Agents initially
+agent_lst = [Agent() for x in range(int(NUMBER_OF_AGENTS))]
+
+# populate Cops initially
+cops_lst = [Cop() for x in range(int(NUMBER_OF_COPS))]
+
+# agent_dict is used to maintain Agent object reference
+agent_dict = {}
+for agent in agent_lst:
+    agent_dict[agent.id] = agent
+
+# cop_dict is used to maintain Cop object reference
 cop_dict = {}
 for cop in cops_lst:
     cop_dict[cop.id] = cop
 
-# print("----")
-
-# print(obj_lst[0].id)
-# print(d)
-# obj_lst[0].movement()
-# print("-------")
-# print(d)
-# print(cops_lst[0])
-
+# run a number of passes in the world
 for a in range(0, 10):
-    for obj in obj_lst:
-        obj.movement()
+    # for all agents in the world, enable movement
+    for agent in agent_lst:
+        agent.movement()
 
-    for obj in cops_lst:
-        obj.movement()
+    # for all cops in the world, enable movement
+    for cop in cops_lst:
+        cop.movement()
 
-    for obj in obj_lst:
-        obj.handle_state()
+    # for all agents in the world, enable handle_state, state is potentially changed but not updated at this point
+    for agent in agent_lst:
+        agent.handle_state()
 
-    for obj in obj_lst:
-        obj.update_state()
+    # for all agents in the world, enable update_state, state is updated for all agents altogether
+    for agent in agent_lst:
+        agent.update_state()
 
-    for obj in cops_lst:
-        obj.arrest()
+    # for all cops in the world, enable arrest
+    for cop in cops_lst:
+        cop.arrest()
 
-    for obj in obj_lst:
-        if obj_dict[obj.id].state == constants.JAILED:
-            # print("Jailed")
-            if obj_dict[obj.id].jail_term > 1:
-                obj_dict[obj.id].jail_term -= 1
-            elif obj_dict[obj.id].jail_term == 1:
-                # print("hits")
-                available_world_positions = empty_positions_in_world(d)
-                position_selected = available_world_positions[random.randrange(0, len(available_world_positions))]
-                # print(position_selected)
-                obj_dict[obj.id].position = position_selected
-                # print("placed at " + str(position_selected))
-                obj_dict[obj.id].state = constants.QUIET
-                obj_dict[obj.id].jail_term -= 1
-                d[position_selected] = obj.id
+    # for all agents check
+    for agent in agent_lst:
+        agent.handle_jailing()
 
     print(
-        '------------------------------------------------------------------------------------------------------------------------')
+        '--------------------------------------------------------------------------------------------------------------'
+        '----------')
     log_table = []
     for i in range(15):
         log_table.append([])
@@ -401,7 +460,7 @@ for a in range(0, 10):
             id = d[get_coordinates_from_position(i, j)]
 
             state = ''
-            for x in obj_lst:
+            for x in agent_lst:
                 if x.id == id:
                     state = x.state
                     break
@@ -424,80 +483,9 @@ for a in range(0, 10):
         print(strrr)
 
         print(
-            '------------------------------------------------------------------------------------------------------------------------')
+            '----------------------------------------------------------------------------------------------------------'
+            '--------------')
     print('')
     print(
-        '------------------------------------------------------------------------------------------------------------------------')
-
-# for x in range(0,3):a
-#     for obj in obj_lst:
-#         obj.movement()
-#
-#     for obj in cops_lst:
-#         obj.movement()
-#
-#     for obj in obj_lst:
-#         obj.handle_state()
-#
-#     for obj in obj_lst:
-#         obj.update_state()
-#
-#     for obj in cops_lst:
-#         obj.arrest()
-#
-#     for obj in obj_lst:
-#         if obj_dict[obj.id].state == JAILED:
-#             print("JAILED")
-#             if obj_dict[obj.id].jail_term > 1:
-#                 obj_dict[obj.id].jail_term -= 1
-#             elif obj_dict[obj.id].jail_term == 1:
-#                 available_positions = empty_positions_in_world(d)
-#                 obj_dict[obj.id].position = available_positions[random.randrange(0, len(available_positions))]
-#                 obj_dict[obj.id].state = QUIET
-#                 obj_dict[obj.id].jail_term -= 1
-#     print(d)
-
-
-# cops_lst[0].arrest()
-#
-# print("---")
-# print(d)
-# print(d)
-# print(cops_lst[0])
-# print("---")
-#
-# cops_lst[0].arrest()
-# print(d)
-
-# obj_lst[0].handle_state()
-#
-# print(obj_lst[0].state)
-# print(obj_lst[0].id, obj_lst[0].position)
-# print(obj_lst[0].movement())
-# print(d)
-# print(obj_dict['A1'].position)
-
-
-# for obj in obj_lst:
-#     print(obj)
-#
-# print(d)
-# print(a1)print(grid.reshape(shape))
-# print(np.where(grid == 79))
-# print("----")
-# print(a2)
-# print(a1.handle_state())
-# print(a1)
-
-
-# obj = Agent()
-# print(obj.get_coordinates(103))
-# print(obj.get_vision_bounds(12, 6))
-# print(obj.get_coordinates_in_bound(8, 2, 16, 10))
-
-# print(obj.get_position_for_coordinates(0, 14))
-# print(d[102])
-
-#
-# print(empty_positions_in_world(d))
-# print(d)
+        '--------------------------------------------------------------------------------------------------------------'
+        '----------')
