@@ -1,6 +1,8 @@
 import random
 import math
 import numpy as np
+import csv
+import os
 # from utils.constants import QUIET, ACTIVE, JAILED
 import constants
 
@@ -14,7 +16,7 @@ GRID_SIZE = 15
 GRID_SCOPE = GRID_SIZE*GRID_SIZE
 INITIAL_COP_DENSITY = 12
 AGENT_DENSITY = 82
-MAX_JAIL_TERM = 10
+MAX_JAIL_TERM = 4
 NUMBER_OF_AGENTS = math.floor(GRID_SCOPE * AGENT_DENSITY * 0.01)
 NUMBER_OF_COPS = math.floor(GRID_SCOPE * INITIAL_COP_DENSITY * 0.01)
 k = random.uniform(0.1, 0.9)
@@ -420,6 +422,14 @@ cop_dict = {}
 for cop in cops_lst:
     cop_dict[cop.id] = cop
 
+try:
+    os.remove('rebellion.csv')
+
+except:
+    pass
+
+boundry = ['-' * 15] * 15
+
 # run a number of passes in the world
 for a in range(0, 10):
     # for all agents in the world, enable movement
@@ -489,3 +499,15 @@ for a in range(0, 10):
     print(
         '--------------------------------------------------------------------------------------------------------------'
         '----------')
+
+    with open('rebellion.csv', 'a', newline='') as csvfile:
+        result = csv.writer(csvfile, dialect='excel')
+        result.writerow(["PASS", a+1])
+        result.writerow([])
+        result.writerow([])
+        result.writerow(boundry)
+        result.writerows(log_table)
+        result.writerow(boundry)
+        result.writerow([])
+        result.writerow([])
+
