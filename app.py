@@ -10,12 +10,12 @@ import constants
 
 states = [constants.QUIET, constants.ACTIVE, constants.JAILED]
 # GOVERNMENT_LEGITIMACY = random.uniform(0.1, 0.9)
-GOVERNMENT_LEGITIMACY = 0.99
+GOVERNMENT_LEGITIMACY = 0.9
 VISION = 3
 GRID_SIZE = 15
 GRID_SCOPE = GRID_SIZE*GRID_SIZE
-INITIAL_COP_DENSITY = 12
-AGENT_DENSITY = 82
+INITIAL_COP_DENSITY = 20
+AGENT_DENSITY = 80
 MAX_JAIL_TERM = 4
 NUMBER_OF_AGENTS = math.floor(GRID_SCOPE * AGENT_DENSITY * 0.01)
 NUMBER_OF_COPS = math.floor(GRID_SCOPE * INITIAL_COP_DENSITY * 0.01)
@@ -203,6 +203,31 @@ def vision_analysis(position):
 
     return vision_position_list
 
+
+def reporter():
+    number_of_active_agents_in_the_world = 0
+    number_of_jailed_agents_in_the_world = 0
+    for agent in agent_lst:
+        if agent_dict[agent.id].state == constants.ACTIVE:
+            number_of_active_agents_in_the_world += 1
+        elif agent_dict[agent.id].state == constants.JAILED:
+            number_of_jailed_agents_in_the_world += 1
+        else:
+            pass
+
+    rebellion_in_percentage = (number_of_active_agents_in_the_world/NUMBER_OF_AGENTS) + \
+                              0.5 * (number_of_jailed_agents_in_the_world/NUMBER_OF_AGENTS)
+
+    print(rebellion_in_percentage)
+
+    if rebellion_in_percentage > 0.6:
+        rebellion = True
+    else:
+        rebellion = False
+
+    return rebellion
+
+
 # end of helper functions
 
 
@@ -216,11 +241,11 @@ class Agent:
         global d
         self.id = "A" + str(agent_count)
         # perceived hardship of the Agent, will not change
-        # self.perceived_hardship = random.uniform(0.1, 0.9)
-        self.perceived_hardship = 0.01
+        self.perceived_hardship = random.uniform(0.1, 0.9)
+        # self.perceived_hardship = 0.6
         # risk aversion of the Agent, will not change
-        # self.risk_aversion = random.uniform(0.1, 0.9)
-        self.risk_aversion = 1
+        self.risk_aversion = random.uniform(0.1, 0.9)
+        # self.risk_aversion = 1
         # initial state of the Agent
         self.state = constants.QUIET
         # new state of the Agent, initialised as QUIET
@@ -273,10 +298,11 @@ class Agent:
         # formula for estimated_arrest_probability is 1-exp(-k*(number of cops in the VISION bounds/
         # number of active agents in the VISION bounds))
         try:
+            # print("active " + str(number_of_active_agents))
+            # print("number_of_cops " + str(number_of_cops))
             estimated_arrest_probability = 1 - math.exp(-k * (math.floor(number_of_cops / number_of_active_agents)))
         except ZeroDivisionError:
             estimated_arrest_probability = 1
-        # print(estimated_arrest_probability)
         return estimated_arrest_probability
 
     def net_risk(self):
@@ -286,9 +312,8 @@ class Agent:
         # get the number of cops and active agents in the VISION bounds
         active_agents_and_cops_in_vision = get_active_agents_and_cops_in_vision(vision_position_list,
                                                                                 position=self.position)
-        # print(active_agents_and_cops_in_vision)
-        return self.__estimated_arrest_probability(active_agents_and_cops_in_vision[0],
-                                                   active_agents_and_cops_in_vision[1]) * self.risk_aversion
+        return self.__estimated_arrest_probability(active_agents_and_cops_in_vision[1],
+                                                   active_agents_and_cops_in_vision[0]) * self.risk_aversion
 
     def update_state(self):
         """method updates the state of an Agent object to the handled state in a given pass. This ensures that the
@@ -303,6 +328,8 @@ class Agent:
         # if state is JAILED do nothing
         if self.state is not constants.JAILED:
             # if grievance is higher than net_risk and state is QUIET set the new_state to ACTIVE
+            # print("grievance" + str(self.grievance()))
+            # print("net_risk" + str(self.net_risk()))
             if self.grievance() > self.net_risk() and self.state == constants.QUIET:
                 self.__new_state = constants.ACTIVE
             else:
@@ -510,4 +537,10 @@ for a in range(0, 10):
         result.writerow(boundry)
         result.writerow([])
         result.writerow([])
+
+    if reporter():
+        print("There is a rebellion!")
+
+    else:
+        print("The World is peaceful!")
 
