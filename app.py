@@ -5,20 +5,76 @@ import os
 # from utils.constants import QUIET, ACTIVE, JAILED
 import constants
 
+import statistics
+
 # global parameters
 
 states = [constants.QUIET, constants.ACTIVE, constants.JAILED]
 # GOVERNMENT_LEGITIMACY = random.uniform(0.1, 0.9)
-GOVERNMENT_LEGITIMACY = 0.9
-VISION = 3
+
+while True:
+    try:
+        GOVERNMENT_LEGITIMACY = input("Enter the Government Legitimacy (Between 0.01 and 0.99): ")
+        GOVERNMENT_LEGITIMACY = float(GOVERNMENT_LEGITIMACY)
+        if 0.01 <= GOVERNMENT_LEGITIMACY <= 0.99:
+            break
+        else:
+            print("Enter a value between 0.01 and 0.99 ")
+    except ValueError:
+        print("Enter a valid value")
+
+while True:
+    try:
+        VISION = input("Enter the VISION ( Integer between 1 and 7): ")
+        VISION = int(VISION)
+        if 1 <= VISION <= 7:
+            break
+        else:
+            print("Enter a value between 1 and 7 ")
+    except ValueError:
+        print("Enter a valid value")
+
+while True:
+    try:
+        AGENT_DENSITY = input("Enter the AGENT_DENSITY ( Integer between 1 and 100): ")
+        AGENT_DENSITY = int(AGENT_DENSITY)
+        if 1 <= AGENT_DENSITY <= 100:
+            break
+        else:
+            print("Enter a value between 1 and 100 ")
+    except ValueError:
+        print("Enter a valid value")
+
+while True:
+    try:
+        INITIAL_COP_DENSITY = input("Enter the INITIAL_COP_DENSITY ( Integer between 1 and 100, and the sum of "
+                                    "AGENT_DENSITY and INITIAL_COP_DENSITY should be <= 100): ")
+        INITIAL_COP_DENSITY = int(INITIAL_COP_DENSITY)
+        if 1 <= AGENT_DENSITY + INITIAL_COP_DENSITY <= 100:
+            break
+        else:
+            print("Sum of AGENT_DENSITY and INITIAL_COP_DENSITY should be <= 100")
+    except ValueError:
+        print("Enter a valid value")
+
+
+while True:
+    try:
+        MAX_JAIL_TERM = input("Enter the MAX_JAIL_TERM ( Integer between 1 and 10): ")
+        MAX_JAIL_TERM = int(MAX_JAIL_TERM)
+        if 1 <= MAX_JAIL_TERM <= 10:
+            break
+        else:
+            print("Enter a value between 1 and 10 ")
+    except ValueError:
+        print("Enter a valid value")
+
 GRID_SIZE = 15
 GRID_SCOPE = GRID_SIZE*GRID_SIZE
-INITIAL_COP_DENSITY = 20
-AGENT_DENSITY = 80
-MAX_JAIL_TERM = 4
 NUMBER_OF_AGENTS = math.floor(GRID_SCOPE * AGENT_DENSITY * 0.01)
 NUMBER_OF_COPS = math.floor(GRID_SCOPE * INITIAL_COP_DENSITY * 0.01)
-k = random.uniform(0.1, 0.9)
+# similar to netlogo model
+k = 2.3
 # NUMBER_OF_ACTIVE_AGENTS = 6
 
 # randomly assign positions in the GRID_SCOPE for Agents
@@ -196,6 +252,27 @@ def vision_analysis(position):
     return vision_position_list
 
 
+def some():
+    number_of_active_agents_in_the_world = 0
+    number_of_jailed_agents_in_the_world = 0
+    # for every agent in the world
+    for agent in agent_lst:
+        # if the agent it active increment the active agents count
+        if agent_dict[agent.id].state == constants.ACTIVE:
+            number_of_active_agents_in_the_world += 1
+
+        # if the agent it jailed increment the jailed agents count
+        elif agent_dict[agent.id].state == constants.JAILED:
+            number_of_jailed_agents_in_the_world += 1
+        else:
+            pass
+
+    agent_active_data = ((number_of_active_agents_in_the_world / NUMBER_OF_AGENTS) * 100)
+    jailed_data = ((number_of_jailed_agents_in_the_world / NUMBER_OF_AGENTS) * 100)
+
+    return [agent_active_data, jailed_data]
+
+
 def reporter():
     """function returns whether the world is in the state of rebel or not"""
     number_of_active_agents_in_the_world = 0
@@ -214,10 +291,11 @@ def reporter():
 
     # rebellion is perceived as the sum of active agents percentage and half the percentage of jailed agents.
     rebellion_in_percentage = (number_of_active_agents_in_the_world/NUMBER_OF_AGENTS) + \
-                              0.5 * (number_of_jailed_agents_in_the_world/NUMBER_OF_AGENTS)
+                              0.3 * (number_of_jailed_agents_in_the_world/NUMBER_OF_AGENTS)
+    print(rebellion_in_percentage)
 
     # if rebellion_in_percentage is greater than 60% there is a rebellion in the world
-    if rebellion_in_percentage > 0.6:
+    if rebellion_in_percentage > 0.5:
         rebellion = True
     else:
         rebellion = False
@@ -286,7 +364,7 @@ class Agent:
     def grievance(self):
         """method calculates the grievance of the Agent object"""
         global GOVERNMENT_LEGITIMACY
-        return self.perceived_hardship/GOVERNMENT_LEGITIMACY
+        return self.perceived_hardship * (1 - GOVERNMENT_LEGITIMACY)
 
     def __estimated_arrest_probability(self, number_of_cops, number_of_active_agents):
         """method returns estimated_arrest_probability of the Agent object"""
@@ -454,8 +532,11 @@ except:
 
 boundry = ['-' * GRID_SIZE] * GRID_SIZE
 
+active_list = []
+jailed_list = []
+
 # run a number of passes in the world
-for a in range(0, 10):
+for a in range(0, 50):
     # for all agents in the world, enable movement
     for agent in agent_lst:
         agent.movement()
@@ -535,9 +616,19 @@ for a in range(0, 10):
         result.writerow([])
         result.writerow([])
 
+    agent_active_data = []
+    jailed_data = []
+
     if reporter():
         print("There is a rebellion!")
 
     else:
         print("The World is peaceful!")
 
+    active_ob = some()
+    active_list.append(active_ob[0])
+    jailed_list.append(active_ob[1])
+
+
+print(statistics.mean(active_list))
+print(statistics.mean(jailed_list))
