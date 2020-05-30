@@ -4,12 +4,9 @@ import csv
 import os
 import constants
 
-import statistics
-
 # global parameters
 
 states = [constants.QUIET, constants.ACTIVE, constants.JAILED]
-# GOVERNMENT_LEGITIMACY = random.uniform(0.1, 0.9)
 
 while True:
     try:
@@ -84,6 +81,22 @@ while True:
             break
         else:
             print("Enter a value between 1 and 100 ")
+    except ValueError:
+        print("Enter a valid value")
+
+while True:
+    try:
+        MOVEMENT = input("Do you want Movement in the World? Y for yes, N for "
+                         "No: ")
+        MOVEMENT = str(MOVEMENT)
+        if MOVEMENT == 'Y':
+            MOVEMENT = True
+            break
+        elif MOVEMENT == 'N':
+            MOVEMENT = False
+            break
+        else:
+            print("Enter Y or N")
     except ValueError:
         print("Enter a valid value")
 
@@ -577,12 +590,13 @@ jailed_list = []
 # run a number of passes in the world
 for a in range(NUMBER_OF_PASSES):
     # for all agents in the world, enable movement
-    for agent in agent_lst:
-        agent.movement()
+    if MOVEMENT:
+        for agent in agent_lst:
+            agent.movement()
 
-    # for all cops in the world, enable movement
-    for cop in cops_lst:
-        cop.movement()
+        # for all cops in the world, enable movement
+        for cop in cops_lst:
+            cop.movement()
 
     # for all agents in the world, enable handle_state, state is potentially
     # changed but not updated at this point
