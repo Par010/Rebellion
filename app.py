@@ -31,7 +31,7 @@ initial_cop_positions = []
 # cops left to be placed in the initial world
 cops_left = NUMBER_OF_COPS
 
-for pos in range(1, 226):
+for pos in range(1, GRID_SCOPE + 1):
     # if position in not taken by an Agent and Cops left is more than 1 in the initial world assign the position to Cop
     if pos not in initial_agent_positions and cops_left > 0:
         initial_cop_positions.append(pos)
@@ -82,20 +82,20 @@ def empty_positions_in_world(dt):
 
 def get_coordinates_from_position(x, y):
     """function returns the 2D coordinates in the grid from a position index"""
-    return y*15+x+1
+    return y*GRID_SIZE+x+1
 
 
 # get coordinates from position
 def get_coordinates(position):
     """function returns coordinates in 2D from a position index"""
     # get the x coordinate through mod on the GRID_SIZE
-    if position % 15 == 0:
+    if position % GRID_SIZE == 0:
         x = 14
     else:
-        x = (position % 15) - 1
+        x = (position % GRID_SIZE) - 1
 
     # get the y coordinate through division on the GRID_SIZE
-    y = int(math.ceil(position/15)) - 1
+    y = int(math.ceil(position/GRID_SIZE)) - 1
     return [x, y]
 
 
@@ -114,7 +114,7 @@ def get_vision_bounds(x, y):
 def get_circular_coordinates(x):
     """function takes coordinate and return normalised coordinate to fit the round grid scope,
     eg. 2 positions to the left of coordinate (1,1) will be (-1,1) but in the round grid it will be (14,1)"""
-    return (x % 15 + 15) % 15
+    return (x % GRID_SIZE + GRID_SIZE) % GRID_SIZE
 
 
 # get all the coordinates in the vision
@@ -205,21 +205,26 @@ def vision_analysis(position):
 
 
 def reporter():
+    """function returns whether the world is in the state of rebel or not"""
     number_of_active_agents_in_the_world = 0
     number_of_jailed_agents_in_the_world = 0
+    # for every agent in the world
     for agent in agent_lst:
+        # if the agent it active increment the active agents count
         if agent_dict[agent.id].state == constants.ACTIVE:
             number_of_active_agents_in_the_world += 1
+
+        # if the agent it jailed increment the jailed agents count
         elif agent_dict[agent.id].state == constants.JAILED:
             number_of_jailed_agents_in_the_world += 1
         else:
             pass
 
+    # rebellion is perceived as the sum of active agents percentage and half the percentage of jailed agents.
     rebellion_in_percentage = (number_of_active_agents_in_the_world/NUMBER_OF_AGENTS) + \
                               0.5 * (number_of_jailed_agents_in_the_world/NUMBER_OF_AGENTS)
 
-    print(rebellion_in_percentage)
-
+    # if rebellion_in_percentage is greater than 60% there is a rebellion in the world
     if rebellion_in_percentage > 0.6:
         rebellion = True
     else:
@@ -455,7 +460,7 @@ try:
 except:
     pass
 
-boundry = ['-' * 15] * 15
+boundry = ['-' * GRID_SIZE] * GRID_SIZE
 
 # run a number of passes in the world
 for a in range(0, 10):
@@ -487,13 +492,13 @@ for a in range(0, 10):
         '--------------------------------------------------------------------------------------------------------------'
         '----------')
     log_table = []
-    for i in range(15):
+    for i in range(GRID_SIZE):
         log_table.append([])
 
     # generate log data
-    for i in range(15):
+    for i in range(GRID_SIZE):
         strrr = ''
-        for j in range(15):
+        for j in range(GRID_SIZE):
             id = d[get_coordinates_from_position(i, j)]
 
             state = ''
