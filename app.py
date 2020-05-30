@@ -1,6 +1,6 @@
 import random
 import math
-import numpy as np
+# import numpy as np
 import csv
 import os
 # from utils.constants import QUIET, ACTIVE, JAILED
@@ -55,7 +55,7 @@ grid_lst = [x for x in range(1, GRID_SCOPE+1)]
 # 0 depicts an empty position
 d = {x: 0 for x in grid_lst}
 
-grid = np.array(grid_lst)
+# grid = np.array(grid_lst)
 
 # a counter used to create unique ids for Agent
 agent_count = 1
@@ -63,7 +63,7 @@ agent_count = 1
 # a counter used to create unique ids for Cop
 cop_count = 1
 
-print(grid.reshape(shape))
+# print(grid.reshape(shape))
 
 
 # helper functions
@@ -206,6 +206,65 @@ def vision_analysis(position):
 # end of helper functions
 
 
+def log(agent_lst):
+    log_table = []
+    for i in range(15):
+        log_table.append([])
+
+    # generate log data
+    for i in range(15):
+        strrr = ''
+        for j in range(15):
+            id = d[get_coordinates_from_position(i, j)]
+            state = ''
+            for x in agent_lst:
+                if x.id == id:
+                    state = x.state
+                    break
+
+            str_id = str(id)
+            if id == 0:
+                str_id = ''
+
+            log_table[i].insert(j, str_id + ' ' + state)
+
+    # print log data
+    strr = '   |'
+    for x in range(15):
+        strr = strr + '  ' + str("{0:0=2d}".format(x)) + '   |'
+    print(strr)
+    print(
+        '--------------------------------------------------------------------------------------------------------------'
+        '--------------')
+
+    i = 0
+    for row in log_table:
+        strrr = ''
+
+        j = 0
+        for cell in row:
+            index = -1
+            space = 7 - len(cell)
+            for sp in range(space):
+                cell = '' + cell + ' '
+            
+            if (j == 0):
+                cell = str("{0:0=2d}".format(i)) + ' |' + cell
+
+            strrr = strrr + cell + '|'
+            j+=1
+        i+=1
+        print(strrr)
+
+        print(
+            '----------------------------------------------------------------------------------------------------------'
+            '------------------')
+    print('')
+    print(
+        '--------------------------------------------------------------------------------------------------------------'
+        '----------')
+
+
 class Agent:
     """Agent is a part of general population in the world who can be either in the QUIET, ACTIVE, or JAILED
     state based on the net_risk and grievance"""
@@ -257,6 +316,9 @@ class Agent:
                 self.position = chosen_position_to_jump
                 # set the id of the Agent to the position in the world i.e d
                 d[chosen_position_to_jump] = self.id
+
+                print(str(self.id) + ' moves to ' + str(get_coordinates(self.position)))
+
         else:
             pass
         return 0
@@ -305,6 +367,7 @@ class Agent:
             # if grievance is higher than net_risk and state is QUIET set the new_state to ACTIVE
             if self.grievance() > self.net_risk() and self.state == constants.QUIET:
                 self.__new_state = constants.ACTIVE
+                print(str(self.id) + ' rebels at ' + str(get_coordinates(self.position)))
             else:
                 # if the state was not changed assign new_state as state
                 self.__new_state = self.state
@@ -331,6 +394,7 @@ class Agent:
                 self.jail_term -= 1
                 # set the id of the Agent in the position in the world, i.e d
                 d[position_selected] = self.id
+                print(self.id + ' gets released to ' + str(get_coordinates(position_selected)))
 
 
 class Cop:
@@ -368,6 +432,7 @@ class Cop:
             self.position = chosen_position_to_jump
             # set the id of the Cop to the position in the world i.e d
             d[chosen_position_to_jump] = self.id
+            print(str(self.id) + ' moves to ' + str(get_coordinates(self.position)))
         return 0
 
     def arrest(self):
@@ -393,6 +458,7 @@ class Cop:
             # print(agent_dict[d[agent_to_jail]])
             # change agent position to unknown - 0
             agent_dict[d[agent_to_jail]].position = None
+            print(self.id + ' arrests ' + agent_dict[d[agent_to_jail]].id + ' at ' + str(get_coordinates(agent_to_jail)))
             # vacate the position of the jailed agent
             d[agent_to_jail] = 0
             # vacate cop's current position
@@ -435,10 +501,12 @@ for a in range(0, 10):
     # for all agents in the world, enable movement
     for agent in agent_lst:
         agent.movement()
+    log(agent_lst)
 
     # for all cops in the world, enable movement
     for cop in cops_lst:
         cop.movement()
+    log(agent_lst)
 
     # for all agents in the world, enable handle_state, state is potentially changed but not updated at this point
     for agent in agent_lst:
@@ -447,67 +515,26 @@ for a in range(0, 10):
     # for all agents in the world, enable update_state, state is updated for all agents altogether
     for agent in agent_lst:
         agent.update_state()
+    log(agent_lst)
 
     # for all cops in the world, enable arrest
     for cop in cops_lst:
         cop.arrest()
+    log(agent_lst)
 
     # for all agents check
     for agent in agent_lst:
         agent.handle_jailing()
+    log(agent_lst)
 
-    print(
-        '--------------------------------------------------------------------------------------------------------------'
-        '----------')
-    log_table = []
-    for i in range(15):
-        log_table.append([])
-
-    # generate log data
-    for i in range(15):
-        strrr = ''
-        for j in range(15):
-            id = d[get_coordinates_from_position(i, j)]
-
-            state = ''
-            for x in agent_lst:
-                if x.id == id:
-                    state = x.state
-                    break
-
-            str_id = str(id)
-            if id == 0:
-                str_id = ''
-
-            log_table[i].insert(j, str_id + ' ' + state)
-
-    # print log data
-    for row in log_table:
-        strrr = ''
-        for cell in row:
-            space = 7 - len(cell)
-            for sp in range(space):
-                cell = '' + cell + ' '
-
-            strrr = strrr + cell + '|'
-        print(strrr)
-
-        print(
-            '----------------------------------------------------------------------------------------------------------'
-            '--------------')
-    print('')
-    print(
-        '--------------------------------------------------------------------------------------------------------------'
-        '----------')
-
-    with open('rebellion.csv', 'a', newline='') as csvfile:
-        result = csv.writer(csvfile, dialect='excel')
-        result.writerow(["PASS", a+1])
-        result.writerow([])
-        result.writerow([])
-        result.writerow(boundry)
-        result.writerows(log_table)
-        result.writerow(boundry)
-        result.writerow([])
-        result.writerow([])
+    # with open('rebellion.csv', 'a', newline='') as csvfile:
+    #     result = csv.writer(csvfile, dialect='excel')
+    #     result.writerow(["PASS", a+1])
+    #     result.writerow([])
+    #     result.writerow([])
+    #     result.writerow(boundry)
+    #     result.writerows(log_table)
+    #     result.writerow(boundry)
+    #     result.writerow([])
+    #     result.writerow([])
 
