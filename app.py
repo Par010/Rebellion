@@ -2,7 +2,6 @@ import random
 import math
 import csv
 import os
-# from utils.constants import QUIET, ACTIVE, JAILED
 import constants
 
 import statistics
@@ -290,29 +289,6 @@ def vision_analysis(position):
     return vision_position_list
 
 
-def some():
-    number_of_active_agents_in_the_world = 0
-    number_of_jailed_agents_in_the_world = 0
-    # for every agent in the world
-    for agent in agent_lst:
-        # if the agent it active increment the active agents count
-        if agent_dict[agent.id].state == constants.ACTIVE:
-            number_of_active_agents_in_the_world += 1
-
-        # if the agent it jailed increment the jailed agents count
-        elif agent_dict[agent.id].state == constants.JAILED:
-            number_of_jailed_agents_in_the_world += 1
-        else:
-            pass
-
-    agent_active_data = ((number_of_active_agents_in_the_world /
-                          NUMBER_OF_AGENTS) * 100)
-    jailed_data = ((number_of_jailed_agents_in_the_world / NUMBER_OF_AGENTS)
-                   * 100)
-
-    return [agent_active_data, jailed_data]
-
-
 def reporter():
     """function returns whether the world is in the state of rebel or not"""
     number_of_active_agents_in_the_world = 0
@@ -334,7 +310,6 @@ def reporter():
     rebellion_in_percentage = \
         (number_of_active_agents_in_the_world/NUMBER_OF_AGENTS) + \
         0.3 * (number_of_jailed_agents_in_the_world/NUMBER_OF_AGENTS)
-    print(rebellion_in_percentage)
 
     # if rebellion_in_percentage is greater than 60% there is a rebellion
     # in the world
@@ -424,8 +399,6 @@ class Agent:
         #  in the VISION bounds/
         # number of active agents in the VISION bounds))
         try:
-            # print("active " + str(number_of_active_agents))
-            # print("number_of_cops " + str(number_of_cops))
             estimated_arrest_probability = 1 - math.exp(-k * (math.floor(
                 number_of_cops / number_of_active_agents)))
         except ZeroDivisionError:
@@ -462,8 +435,6 @@ class Agent:
         if self.state is not constants.JAILED:
             # if grievance is higher than net_risk and state is QUIET set the
             #  new_state to ACTIVE
-            # print("grievance" + str(self.grievance()))
-            # print("net_risk" + str(self.net_risk()))
             if self.grievance() > self.net_risk() and self.state == \
                     constants.QUIET:
                 self.__new_state = constants.ACTIVE
@@ -555,14 +526,12 @@ class Cop:
             agent_to_jail_position = random.randrange(0, len(active_agents_lst))
             # choose an agent in random from the list of active agents
             agent_to_jail = active_agents_lst[agent_to_jail_position]
-            # print(agent_to_jail)
             # d[agent_to_jail_position] = 0
             # jail the chosen active agent
             agent_dict[d[agent_to_jail]].state = constants.JAILED
             # give the agent a jail term from 1 to max jail term
             agent_dict[d[agent_to_jail]].jail_term = \
                 random.randrange(2, MAX_JAIL_TERM+2)
-            # print(agent_dict[d[agent_to_jail]])
             # change agent position to unknown - 0
             agent_dict[d[agent_to_jail]].position = None
             # vacate the position of the jailed agent
@@ -659,7 +628,6 @@ for a in range(NUMBER_OF_PASSES):
 
             log_table[i].insert(j, str_id + ' ' + state)
 
-    # print log data
     for row in log_table:
         strrr = ''
         for cell in row:
@@ -700,10 +668,3 @@ for a in range(NUMBER_OF_PASSES):
     else:
         print("The World is peaceful!")
 
-    active_ob = some()
-    active_list.append(active_ob[0])
-    jailed_list.append(active_ob[1])
-
-
-print(statistics.mean(active_list))
-print(statistics.mean(jailed_list))
