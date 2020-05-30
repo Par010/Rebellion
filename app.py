@@ -1,6 +1,5 @@
 import random
 import math
-import numpy as np
 import csv
 import os
 # from utils.constants import QUIET, ACTIVE, JAILED
@@ -45,9 +44,6 @@ agent_start = 0
 # tracking number of positions assigned for Cops in the initial world
 cop_start = 0
 
-
-shape = (15, 15)
-
 # grid scope [1, 225]
 grid_lst = [x for x in range(1, GRID_SCOPE+1)]
 
@@ -55,15 +51,11 @@ grid_lst = [x for x in range(1, GRID_SCOPE+1)]
 # 0 depicts an empty position
 d = {x: 0 for x in grid_lst}
 
-grid = np.array(grid_lst)
-
 # a counter used to create unique ids for Agent
 agent_count = 1
 
 # a counter used to create unique ids for Cop
 cop_count = 1
-
-print(grid.reshape(shape))
 
 
 # helper functions
