@@ -247,12 +247,9 @@ def log(agent_lst):
             space = 7 - len(cell)
             for sp in range(space):
                 cell = '' + cell + ' '
-            
-            if (j == 0):
-                cell = str("{0:0=2d}".format(i)) + ' |' + cell
-
             strrr = strrr + cell + '|'
-            j+=1
+        
+        strrr = str("{0:0=2d}".format(i)) + ' |' + strrr
         i+=1
         print(strrr)
 
