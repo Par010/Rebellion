@@ -69,6 +69,18 @@ while True:
     except ValueError:
         print("Enter a valid value")
 
+
+while True:
+    try:
+        NUMBER_OF_PASSES = input("Enter the NUMBER_OF_PASSES ( Integer between 1 and 100): ")
+        NUMBER_OF_PASSES = int(NUMBER_OF_PASSES)
+        if 1 <= NUMBER_OF_PASSES <= 100:
+            break
+        else:
+            print("Enter a value between 1 and 100 ")
+    except ValueError:
+        print("Enter a valid value")
+
 GRID_SIZE = 15
 GRID_SCOPE = GRID_SIZE*GRID_SIZE
 NUMBER_OF_AGENTS = math.floor(GRID_SCOPE * AGENT_DENSITY * 0.01)
@@ -536,7 +548,7 @@ active_list = []
 jailed_list = []
 
 # run a number of passes in the world
-for a in range(0, 50):
+for a in range(NUMBER_OF_PASSES):
     # for all agents in the world, enable movement
     for agent in agent_lst:
         agent.movement()
